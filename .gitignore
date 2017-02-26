@@ -1,6 +1,8 @@
 non-vehicles
 vehicles
 .ipynb_checkpoints
+__pycache__
+test.mp4
 
 notes/*cars*
 
