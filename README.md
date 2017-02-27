@@ -114,7 +114,9 @@ Here's an example result showing the heatmap from a series of frames of video.
 I had a lot of trouble with picking the right parameters for the sliding window implementation.
 A more sophisticated implemenation would really improve the performance of the pipeline.  Tracking a vehicle and remember features of a vehicle (color, relative location in the image, size, etc) once identified would help generate much more accurate predictions in subsequent frames.
 
-I also had a problem with false positives in on the road.
+I also had a problem with false negatives.
+It was difficult to find a correct threshold to filter out all the false positives without filtering out too many true positives.
+
 I could fix this by:
 
 1. Getting more training data and improving the accuracy of the classifier.
