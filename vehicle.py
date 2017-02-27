@@ -325,7 +325,7 @@ def find_cars(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell,
 
     # Define blocks and steps
     # These values are used to generate the windows for the
-    # sliding window mplementation.
+    # sliding window implementation.
     nxblocks = (ch1.shape[1] // pix_per_cell) - 1
     nyblocks = (ch1.shape[0] // pix_per_cell) - 1
 
