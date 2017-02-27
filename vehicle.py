@@ -155,13 +155,15 @@ def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
     return imcopy
 
 
-# Define a function to extract features from a single image window
-# This function is called by extract_features() to iterate
-# over a list of file paths to images.
 def single_img_features(img, cspace='RGB', spatial_size=(32, 32),
                         hist_bins=32, orient=9, pix_per_cell=8,
                         cell_per_block=2, hog_channel=0, spatial_feat=True,
                         hist_feat=True, hog_feat=True, vis=False):
+    """
+    A function to extract features from a single image window
+    This function is called by extract_features() to iterate
+    over a list of file paths to images.
+    """
     # 1) Define an empty list to receive features
     img_features = []
     # 2) Apply color conversion if other than 'RGB'
@@ -170,24 +172,24 @@ def single_img_features(img, cspace='RGB', spatial_size=(32, 32),
     else:
         feature_image = np.copy(image)
     # 3) Compute spatial features if flag is set
-    if spatial_feat == True:
+    if spatial_feat:
         spatial_features = bin_spatial(feature_image, size=spatial_size)
         # 4) Append features to list
         img_features.append(spatial_features)
     # 5) Compute histogram features if flag is set
-    if hist_feat == True:
+    if hist_feat:
         hist_features = color_hist(feature_image, nbins=hist_bins)
         # 6) Append features to list
         img_features.append(hist_features)
     # 7) Compute HOG features if flag is set
-    if hog_feat == True:
+    if hog_feat:
         if hog_channel == 'ALL':
             hog_features = []
             for channel in range(feature_image.shape[2]):
                 output = get_hog_features(feature_image[:, :, channel],
                                           orient, pix_per_cell, cell_per_block,
                                           vis=vis, feature_vec=True)
-                if type(output) == tuple:
+                if isinstance(output, tuple):
                     hog_features.extend(output[0])
                     hog_image = output[1]
                 else:
@@ -208,21 +210,22 @@ def single_img_features(img, cspace='RGB', spatial_size=(32, 32),
 
     # 9) Return concatenated array of features
     # Don't include visualization if there is none.
-    if hog_image == None:
+    if hog_image is None:
         return np.concatenate(img_features)
     else:
         return np.concatenate(img_features), hog_image
 
 
-# Define a function you will pass an image
-# and the list of windows to be searched (output of slide_windows())
 def search_windows(img, windows, clf, scaler, color_space='RGB',
                    spatial_size=(32, 32), hist_bins=32,
                    hist_range=(0, 256), orient=9,
                    pix_per_cell=8, cell_per_block=2,
                    hog_channel=0, spatial_feat=True,
                    hist_feat=True, hog_feat=True):
-
+    """
+    A function you will pass an image and the list of windows
+    to be searched (output of slide_windows())
+    """
     # 1) Create an empty list to receive positive detection windows
     on_windows = []
     # 2) Iterate over all windows in the list
@@ -286,19 +289,21 @@ def draw_labeled_bboxes(img, labels):
     return img
 
 
-# Define a single function that can extract features using hog
-# sub-sampling and make predictions
 def find_cars(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell,
               cell_per_block, spatial_size, hist_bins, cells_per_step=2,
-              window=64, cspace='YCrCb'):
-    """Returns an image overlayed with positive predictions and a list of
-    bounding boxes
+              window=64, cspace='YCrCb', show_all_windows=False):
+    """
+    A single function that can extract features using hog
+    sub-sampling and make predictions.
+    Returns an image overlayed with positive predictions and a list of
+    bounding boxes.
     cells_per_step - Instead of overlap, define how many cells to step
     window - 64 was the orginal sampling rate, with 8 cells and 8 pix per cell
     """
-
+    # Get a copy of the image on which to draw the boxes.
     draw_img = np.copy(img)
 
+    # Handle the differences between .png and .jpg
     img = img.astype(np.float32) / 255
 
     # Crop the image so that it only looks at the road and ignores the sky.
@@ -318,10 +323,11 @@ def find_cars(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell,
     ch2 = ctrans_tosearch[:, :, 1]
     ch3 = ctrans_tosearch[:, :, 2]
 
-    # Define blocks and steps as above
+    # Define blocks and steps
+    # These values are used to generate the windows for the
+    # sliding window mplementation.
     nxblocks = (ch1.shape[1] // pix_per_cell) - 1
     nyblocks = (ch1.shape[0] // pix_per_cell) - 1
-    nfeat_per_block = orient * cell_per_block**2
 
     nblocks_per_window = (window // pix_per_cell) - 1
 
@@ -338,6 +344,8 @@ def find_cars(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell,
 
     # Boxes that have a positive match
     boxes = []
+
+    # This is the sliding window implementation
     for xb in range(nxsteps):
         for yb in range(nysteps):
             ypos = yb * cells_per_step
@@ -368,22 +376,27 @@ def find_cars(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell,
             #test_features = X_scaler.transform(np.hstack((shape_feat, hist_feat)).reshape(1, -1))
             test_prediction = svc.predict(test_features)
 
-            if test_prediction == 1:
+            if test_prediction == 1 or show_all_windows:
                 xbox_left = np.int(xleft * scale)
                 ytop_draw = np.int(ytop * scale)
                 win_draw = np.int(window * scale)
                 box = (xbox_left, ytop_draw + ystart), (xbox_left +
                                                         win_draw, ytop_draw + win_draw + ystart)
-                cv2.rectangle(draw_img, (box[0][0], box[0][1]), (box[
-                              1][0], box[1][1]), (0, 0, 255), 6)
+                cv2.rectangle(draw_img,
+                              (box[0][0], box[0][1]),
+                              (box[1][0], box[1][1]),
+                              (0, 0, 255),
+                              6)
                 boxes.append(box)
 
     return draw_img, boxes
 
 
 # This function was given in the Q&A
-# Define a function for plotting multiple images
 def visualize(fig, rows, cols, imgs, titles):
+    """
+    Plotting multiple images
+    """
     for i, img in enumerate(imgs):
         plt.subplot(rows, cols, i + 1)
         plt.title(i + 1)
